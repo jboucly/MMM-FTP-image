@@ -6,7 +6,8 @@ const {
 } = require('base64-stream')
 
 module.exports = NodeHelper.create({
-	images: [],
+	imgNameList: [], // Array<{ id: number; name: string }>
+	imgBase64: new Object(), // { base64: string; mimeType: string }
 	imgAuthorized: 'png|jpg|jpeg|gif',
 
 	init: function () {
@@ -16,63 +17,85 @@ module.exports = NodeHelper.create({
 	/**
 	 * Subscribe to websocket events
 	 * @param {String} notification - Route name of websocket
-	 * @param {Object} payload - Configuration for FTP server
+	 * @param {Object} payload - Configuration for FTP server with another informations
 	 */
 	socketNotificationReceived: function (notification, payload) {
 		var self = this;
 
-		if (notification === 'FTP_IMG') {
-			self.images = [];
-			const ftp = new FTPClient();
-
-			ftp.on('ready', function () {
-				ftp.cwd(payload.dirPath, function (err) {
-					if (err) throw err
-				});
-
-				ftp.list(async function (err, list) {
-					if (err) throw err;
-
-					for (let i = 0; i < list.length; i++) {
-						const file = list[i];
-
-						// If file is a type of File and extension match with imgAuthorized
-						if (file.type === '-' && file.name.match(new RegExp(`.(${self.imgAuthorized}?)$`, 'gm'))) {
-							await new Promise((resolve, reject) => {
-								ftp.get(file.name, function (err, stream) {
-									if (err) reject(err);
-
-									self.streamToBase64(stream).then(function (res) {
-										self.images.push({
-											mimeType: self.getMimeType(res),
-											base64: res,
-										});
-										resolve();
-									}).catch(function (err) {
-										console.error(err);
-									});
-								});
-							});
-						}
-					}
-
-					ftp.end();
-					self.sendImages(self, self.images);
-				});
-			});
-
-			ftp.connect({
-				...payload
-			});
+		if (notification === 'FTP_IMG_CALL_LIST') {
+			self.imgNameList = [];
+			self.connectFTPServer(self, 'list', payload);
+		} else if (notification === 'FTP_IMG_CALL_BASE64') {
+			self.imgBase64 = new Object();
+			self.connectFTPServer(self, 'get', payload);
 		}
 	},
 
-	/**
-	 * Send images object with websocket route
-	 * @param {*} self
-	 */
-	sendImages: function (self) {
-		self.sendSocketNotification('FTP_IMG_LIST', self.images);
+	connectFTPServer: function (self, type, payload) {
+		const ftp = new FTPClient();
+
+		ftp.on('ready', function () {
+			ftp.cwd(payload.dirPath, function (err) {
+				if (err) throw err
+			});
+
+			switch (type) {
+				case 'list':
+					self.sendListName(ftp, self);
+					break;
+				case 'get':
+					self.sendBase64Img(ftp, self, payload);
+					break;
+				default:
+					throw new Error(`This type is not implemented => ${type}`);
+			}
+		});
+
+		ftp.connect({
+			...payload
+		});
+	},
+
+	sendListName: function (ftp, self) {
+		ftp.list(async function (err, list) {
+			if (err) throw err;
+
+			for (let i = 0; i < list.length; i++) {
+				const file = list[i];
+
+				// If file is a type of File and extension match with imgAuthorized
+				if (file.type === '-' && file.name.match(new RegExp(`.(${self.imgAuthorized}?)$`, 'gm'))) {
+					self.imgNameList.push({
+						id: i,
+						name: file.name,
+					});
+				}
+			}
+
+			ftp.end();
+			self.sendSocketNotification('FTP_IMG_LIST_NAME', self.imgNameList);
+		});
+	},
+
+	sendBase64Img: async function (ftp, self, payload) {
+		await new Promise((resolve, reject) => {
+			ftp.get(payload.fileName, function (err, stream) {
+				if (err) reject(err);
+
+				self.streamToBase64(stream).then(function (res) {
+					self.imgBase64 = {
+						base64: res,
+						mimeType: self.getMimeType(res),
+					};
+					resolve();
+				}).catch(function (err) {
+					throw new Error(err);
+				});
+			})
+		});
+
+		ftp.end();
+		self.sendSocketNotification('FTP_IMG_BASE64', self.imgBase64)
 	},
 
 	/**

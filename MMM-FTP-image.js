@@ -18,7 +18,8 @@ Module.register("MMM-FTP-image", {
 		imageLoadInitialDelay: 1000,
 	},
 
-	images: [], // Type: Array<{ mimeType: string; base64: string }>
+	imgNameList: [], // Type: Array<{ mimeType: string; base64: string }>
+	imgBase64: new Object(), // Type: { base64: string; mimeType: string }
 	imageIndexDisplayed: 0,
 	imageDiplayedNumber: 0,
 	imageLoadFinished: false,
@@ -30,21 +31,28 @@ Module.register("MMM-FTP-image", {
 			this.logMessage('The password is not entered !', 'error');
 		}
 
-		setTimeout(() => this.loadImagesFromFTPServer(), this.config.imageLoadInitialDelay);
+		setTimeout(() => this.getListImgNameFromFTPServer(), this.config.imageLoadInitialDelay);
 	},
 
 	/**
-	 * Send notification of node_helper for get image from FTP server
+	 * Received image from websocket
+	 * @param {String} notification - Route of websocket
+	 * @param {Array<{ id: number; name: string }>} payload - Array of image name to display
 	 */
-	loadImagesFromFTPServer: function () {
-		// Send FTP_IMG for get img from FTP server
-		this.sendSocketNotification("FTP_IMG", {
-			host: this.config.host,
-			port: this.config.port,
-			user: this.config.user,
-			dirPath: this.config.dirPath,
-			password: this.config.password,
-		});
+	socketNotificationReceived: function (notification, payload) {
+		if (notification === "FTP_IMG_LIST_NAME") {
+			this.logMessage('Images list received !');
+			this.imgNameList = payload;
+
+			if (!this.imageLoadFinished) {
+				this.scheduleImgUpdateInterval();
+			}
+		} else if (notification === 'FTP_IMG_BASE64') {
+			this.logMessage('Images received !');
+			this.imgBase64 = payload;
+			this.incrementImageIndex();
+			this.updateDom();
+		}
 	},
 
 	/**
@@ -63,7 +71,7 @@ Module.register("MMM-FTP-image", {
 			return wrapper;
 		}
 
-		const image = this.images[this.imageIndexDisplayed];
+		const image = this.imgBase64;
 
 		if (!image) {
 			this.logMessage(`Could not load image (index: ${this.imageIndexDisplayed})`)
@@ -73,6 +81,20 @@ Module.register("MMM-FTP-image", {
 
 		wrapper.appendChild(this.createImageElement(image));
 		return wrapper;
+	},
+
+	/**
+	 * Send notification of node_helper for get name list from FTP server
+	 */
+	getListImgNameFromFTPServer: function () {
+		// Send FTP_IMG for get img from FTP server
+		this.sendSocketNotification("FTP_IMG_CALL_LIST", {
+			host: this.config.host,
+			port: this.config.port,
+			user: this.config.user,
+			dirPath: this.config.dirPath,
+			password: this.config.password,
+		});
 	},
 
 	/**
@@ -90,32 +112,21 @@ Module.register("MMM-FTP-image", {
 	},
 
 	/**
-	 * Received image from websocket
-	 * @param {String} notification - Route of websocket
-	 * @param {Array<{ mimeType: string; base64: string }>} payload - Array of images to display
-	 */
-	socketNotificationReceived: function (notification, payload) {
-		if (notification === "FTP_IMG_LIST") {
-			this.logMessage('Images received !');
-			this.images = payload;
-
-			if (!this.imageLoadFinished) {
-				this.scheduleImgUpdateInterval();
-			}
-
-			this.imageLoadFinished = true;
-		}
-	},
-
-	/**
 	 * Loop to reload image based on user defined interval time
 	 */
 	scheduleImgUpdateInterval: function () {
 		this.logMessage(`Scheduled update interval (${this.config.imgChangeInterval/1000}s)...`)
 
 		setInterval(() => {
-			this.incrementImageIndex();
-			this.updateDom();
+			this.sendSocketNotification("FTP_IMG_CALL_BASE64", {
+				fileName: this.imgNameList[this.imageIndexDisplayed].name,
+				host: this.config.host,
+				port: this.config.port,
+				user: this.config.user,
+				dirPath: this.config.dirPath,
+				password: this.config.password,
+			});
+			this.imageLoadFinished = true;
 		}, this.config.imgChangeInterval);
 	},
 
@@ -128,9 +139,9 @@ Module.register("MMM-FTP-image", {
 
 		this.logMessage(`Current image index: ${this.imageIndexDisplayed}`)
 
-		if (this.imageDiplayedNumber === this.images.length - 1) {
+		if (this.imageDiplayedNumber === this.imgNameList.length - 1) {
 			this.imageDiplayedNumber = 0;
-			this.loadImagesFromFTPServer();
+			this.getListImgNameFromFTPServer();
 			return;
 		}
 
