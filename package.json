@@ -1,0 +1,12 @@
+{
+	"name": "mmm-random-ftp-image",
+	"version": "1.0.0",
+	"description": "Shows a random image from FTP server",
+	"main": "MMM-Random-FTP-image.js",
+	"author": "jboucly",
+	"license": "ISC",
+	"dependencies": {
+		"ftp": "^0.3.10"
+	},
+	"devDependencies": {}
+}
