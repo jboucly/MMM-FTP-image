@@ -1,12 +1,13 @@
 {
-	"name": "mmm-random-ftp-image",
+	"name": "mm-ftp-image",
 	"version": "1.0.0",
-	"description": "Shows a random image from FTP server",
-	"main": "MMM-Random-FTP-image.js",
+	"description": "Shows images from FTP server",
+	"main": "MMM-FTP-image.js",
 	"author": "jboucly",
 	"license": "ISC",
 	"dependencies": {
+		"base64-stream": "^1.0.0",
+		"concat-stream": "^2.0.0",
 		"ftp": "^0.3.10"
-	},
-	"devDependencies": {}
+	}
 }
