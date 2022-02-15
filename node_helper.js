@@ -31,6 +31,12 @@ module.exports = NodeHelper.create({
 		}
 	},
 
+	/**
+	 * Connect to FTP server
+	 * @param {*} self
+	 * @param {Strig} type - Type of connection
+	 * @param {Object} payload - Payload from websocket
+	 */
 	connectFTPServer: function (self, type, payload) {
 		const ftp = new FTPClient();
 
@@ -56,6 +62,11 @@ module.exports = NodeHelper.create({
 		});
 	},
 
+	/**
+	 * Get list of image name and send this list
+	 * @param {FTPClient} ftp - FTP client
+	 * @param {*} self
+	 */
 	sendListName: function (ftp, self) {
 		ftp.list(async function (err, list) {
 			if (err) throw err;
@@ -77,6 +88,12 @@ module.exports = NodeHelper.create({
 		});
 	},
 
+	/**
+	 *
+	 * @param {FTPClient} ftp - FTP client
+	 * @param {*} self
+	 * @param {Object} payload - Payload from websocket
+	 */
 	sendBase64Img: async function (ftp, self, payload) {
 		await new Promise((resolve, reject) => {
 			ftp.get(payload.fileName, function (err, stream) {
