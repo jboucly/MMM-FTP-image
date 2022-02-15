@@ -1,5 +1,5 @@
 {
-	"name": "mm-ftp-image",
+	"name": "mmm-ftp-image",
 	"version": "1.0.0",
 	"description": "Shows images from FTP server",
 	"main": "MMM-FTP-image.js",
