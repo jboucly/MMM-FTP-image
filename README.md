@@ -16,6 +16,8 @@
 
 A [MagicMirror](https://magicmirror.builders/) Module to display images from an FTP server on the Mirror.
 
+Image authorized : GIF, PNG, JPG
+
 ## Screenshots
 
 Displaying images from FTP server
@@ -75,16 +77,16 @@ modules: [
 ## Configuration options
 
 The following properties can be configured:
-| Options               | Required |  Default  | Description                            |
+| Options | Required | Default | Description |
 |-----------------------|:--------:|:---------:|----------------------------------------|
-| host                  |   false  | localhost | Host of your FTP server                |
-| port                  |   fasle  |     21    | Port of your FTP server                |
-| user                  |   false  |     pi    | Name of user for connect to FTP server |
-| password              |   true   |    null   | Password for connect to FTP server     |
+| host | false | localhost | Host of your FTP server |
+| port | fasle | 21 | Port of your FTP server |
+| user | false | pi | Name of user for connect to FTP server |
+| password | true | null | Password for connect to FTP server |
 | --------------------- | -------- | --------- | -------------------------------------- |
-| opacity               |   false  |    1.0    | Image opacity style                    |
-| width                 |   false  |    100%   | Image width                            |
-| height                |   false  |    100%   | Image height                           |
+| opacity | false | 1.0 | Image opacity style |
+| width | false | 100% | Image width |
+| height | false | 100% | Image height |
 | --------------------- | -------- | --------- | -------------------------------------- |
-| imgChangeInterval     |   false  |    10s    | Image change interval                  |
-| imageLoadInitialDelay |   false  |     1s    | Initial delay for show first image     |
+| imgChangeInterval | false | 10s | Image change interval |
+| imageLoadInitialDelay | false | 1s | Initial delay for show first image |
