@@ -1,6 +1,6 @@
 {
 	"name": "mmm-ftp-image",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Shows images from FTP server",
 	"main": "MMM-FTP-image.js",
 	"author": "jboucly",
