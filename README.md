@@ -37,7 +37,7 @@ $ cd ~/MagicMirror/modules
 2. Clone this module
 
 ```sh
-$ git clone https://github.com/miccl/MMM-Random-local-image.git
+$ git clone https://github.com/jboucly/MMM-FTP-image.git
 ```
 
 3. Go to directory of this module
