@@ -80,7 +80,7 @@ The following properties can be configured:
 | Options | Required | Default | Description |
 |-----------------------|:--------:|:---------:|----------------------------------------|
 | host | false | localhost | Host of your FTP server. Required if the ftp hostname is **not** 'localhost' |
-| port | falSe | 21 | Port of your FTP server. Required if the ftp port is **not** '21' |
+| port | false | 21 | Port of your FTP server. Required if the ftp port is **not** '21' |
 | user | false | pi | Name of user for connect to FTP server. Required if the ftp user is **not** 'pi' |
 | password | true | null | Password for connect to FTP server.|
 | --------------------- | -------- | --------- | -------------------------------------- |
