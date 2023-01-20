@@ -8,7 +8,7 @@ const {
 module.exports = NodeHelper.create({
 	imgNameList: [], // Array<{ id: number; name: string }>
 	imgBase64: new Object(), // { base64: string; mimeType: string }
-	imgAuthorized: 'png|jpg|jpeg|gif',
+	imgAuthorized: 'png|PNG|jpg|JPG|jpeg|JPEG|gif|GIF|bmp|BMP|webp|WEBP|ico|ICO|dib|DIB',
 
 	init: function () {
 		console.log('MMM-FTP-image module helper initialized.');
