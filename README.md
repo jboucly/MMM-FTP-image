@@ -16,7 +16,7 @@
 
 A [MagicMirror](https://magicmirror.builders/) Module to display images from an FTP server on the Mirror.
 
-Image authorized : GIF, PNG, JPG
+Image authorized : GIF, PNG, JPG, JPEG, BMP, WEBP, ICO, DIB
 
 ## Screenshots
 
@@ -79,10 +79,10 @@ modules: [
 The following properties can be configured:
 | Options | Required | Default | Description |
 |-----------------------|:--------:|:---------:|----------------------------------------|
-| host | false | localhost | Host of your FTP server |
-| port | fasle | 21 | Port of your FTP server |
-| user | false | pi | Name of user for connect to FTP server |
-| password | true | null | Password for connect to FTP server |
+| host | false | localhost | Host of your FTP server. Required if the ftp hostname is **not** 'localhost' |
+| port | false | 21 | Port of your FTP server. Required if the ftp port is **not** '21' |
+| user | false | pi | Name of user for connect to FTP server. Required if the ftp user is **not** 'pi' |
+| password | true | null | Password for connect to FTP server.|
 | --------------------- | -------- | --------- | -------------------------------------- |
 | opacity | false | 1.0 | Image opacity style |
 | width | false | 100% | Image width |
