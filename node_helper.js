@@ -1,17 +1,19 @@
 const FTPClient = require('ftp');
 var NodeHelper = require('node_helper');
-const ConcatStream = require('concat-stream')
+const ConcatStream = require('concat-stream');
 const {
 	Base64Encode
-} = require('base64-stream')
+} = require('base64-stream');
+const ImgAuthorized = require('./src/constants/img-authorized');
 
 module.exports = NodeHelper.create({
 	imgNameList: [], // Array<{ id: number; name: string }>
 	imgBase64: new Object(), // { base64: string; mimeType: string }
-	imgAuthorized: 'png|jpg|jpeg|gif',
+	imgAuthorized: ImgAuthorized,
 
 	init: function () {
 		console.log('MMM-FTP-image module helper initialized.');
+		console.log(ImgAuthorized);
 	},
 
 	/**
