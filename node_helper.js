@@ -13,7 +13,6 @@ module.exports = NodeHelper.create({
 
 	init: function () {
 		console.log('MMM-FTP-image module helper initialized.');
-		console.log(ImgAuthorized);
 	},
 
 	/**
