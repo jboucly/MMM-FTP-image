@@ -5,33 +5,40 @@
 
 Module.register("MMM-FTP-image", {
 	defaults: {
+		// FTP server configuration
 		port: 21,
-		user: 'pi',
+		user: "pi",
 		password: null,
-		host: 'localhost',
+		host: "localhost",
 
+		// FTP directory configuration
+		defaultDirPath: "test", // Type: string | null => Default directory to retrieve images
+		dirPathsAuthorized: ["tutu", "toto"], // Type: Array<string> => List of authorized directories
+
+		// Display configuration
 		opacity: 1.0,
-		width: '100%',
-		height: '100%',
-		dirPath: 'images',
-		imgChangeInterval: 10000,
-		imageLoadInitialDelay: 1000,
+		width: "100%",
+		height: "100%",
+		imgChangeInterval: 10000 // Type: number (ms)
 	},
 
 	imgNameList: [], // Type: Array<{ mimeType: string; base64: string }>
 	imgBase64: new Object(), // Type: { base64: string; mimeType: string }
-	imageIndexDisplayed: 0,
-	imageDiplayedNumber: 0,
+	imageDisplayedNumber: 0,
+
 	imageLoadFinished: false,
+	finishAllImgInCurrentDirectory: false,
+
+	intervalInstance: null,
 
 	start: function () {
-		this.logMessage('Started.');
+		this.logMessage("Started.");
 
 		if (!this.config.password) {
-			this.logMessage('The password is not entered !', 'error');
+			this.logMessage("The password is not entered !", "error");
 		}
 
-		setTimeout(() => this.getListImgNameFromFTPServer(), this.config.imageLoadInitialDelay);
+		this.getListImgNameFromFTPServer();
 	},
 
 	/**
@@ -40,18 +47,22 @@ Module.register("MMM-FTP-image", {
 	 * @param {Array<{ id: number; name: string }>} payload - Array of image name to display
 	 */
 	socketNotificationReceived: function (notification, payload) {
-		if (notification === "FTP_IMG_LIST_NAME") {
-			this.logMessage('Images list received !');
-			this.imgNameList = payload;
+		switch (notification) {
+			case "FTP_IMG_LIST_NAME":
+				this.logMessage("Images list received !");
+				this.imgNameList = payload;
 
-			if (!this.imageLoadFinished) {
-				this.scheduleImgUpdateInterval();
-			}
-		} else if (notification === 'FTP_IMG_BASE64') {
-			this.logMessage('Images received !');
-			this.imgBase64 = payload;
-			this.incrementImageIndex();
-			this.updateDom();
+				if (!this.imageLoadFinished || this.finishAllImgInCurrentDirectory) {
+					this.scheduleImgUpdateInterval();
+				}
+				break;
+
+			case "FTP_IMG_BASE64":
+				this.logMessage("Images received !");
+				this.imgBase64 = payload;
+				this.incrementImageIndex();
+				this.updateDom();
+				break;
 		}
 	},
 
@@ -74,7 +85,7 @@ Module.register("MMM-FTP-image", {
 		const image = this.imgBase64;
 
 		if (!image) {
-			this.logMessage(`Could not load image (index: ${this.imageIndexDisplayed})`)
+			this.logMessage(`Could not load image (index: ${this.imageDisplayedNumber})`);
 			wrapper.innerHTML = this.translate("ERROR LOADING");
 			return wrapper;
 		}
@@ -87,13 +98,16 @@ Module.register("MMM-FTP-image", {
 	 * Send notification of node_helper for get name list from FTP server
 	 */
 	getListImgNameFromFTPServer: function () {
+		this.imageDisplayedNumber = 0;
+
 		// Send FTP_IMG for get img from FTP server
 		this.sendSocketNotification("FTP_IMG_CALL_LIST", {
 			host: this.config.host,
 			port: this.config.port,
 			user: this.config.user,
-			dirPath: this.config.dirPath,
 			password: this.config.password,
+			defaultDirPath: this.config.defaultDirPath,
+			dirPathsAuthorized: this.config.dirPathsAuthorized
 		});
 	},
 
@@ -115,18 +129,31 @@ Module.register("MMM-FTP-image", {
 	 * Loop to reload image based on user defined interval time
 	 */
 	scheduleImgUpdateInterval: function () {
-		this.logMessage(`Scheduled update interval (${this.config.imgChangeInterval/1000}s)...`)
+		this.logMessage(`Scheduled update interval (${this.config.imgChangeInterval / 1000}s)...`);
 
-		setInterval(() => {
+		const payload = {
+			host: this.config.host,
+			port: this.config.port,
+			user: this.config.user,
+			password: this.config.password,
+			dirPathsAuthorized: this.config.dirPathsAuthorized
+		};
+
+		// Get first image
+		this.sendSocketNotification("FTP_IMG_CALL_BASE64", {
+			...payload,
+			fileName: this.imgNameList[this.imageDisplayedNumber].name
+		});
+
+		this.imageLoadFinished = true;
+		this.finishAllImgInCurrentDirectory = false;
+
+		// Set interval to reload image
+		this.intervalInstance = setInterval(() => {
 			this.sendSocketNotification("FTP_IMG_CALL_BASE64", {
-				fileName: this.imgNameList[this.imageIndexDisplayed].name,
-				host: this.config.host,
-				port: this.config.port,
-				user: this.config.user,
-				dirPath: this.config.dirPath,
-				password: this.config.password,
+				...payload,
+				fileName: this.imgNameList[this.imageDisplayedNumber].name
 			});
-			this.imageLoadFinished = true;
 		}, this.config.imgChangeInterval);
 	},
 
@@ -135,17 +162,16 @@ Module.register("MMM-FTP-image", {
 	 * @returns {void}
 	 */
 	incrementImageIndex: function () {
-		this.imageIndexDisplayed = this.imageDiplayedNumber;
+		this.logMessage(`Current image index: ${this.imageDisplayedNumber}`);
 
-		this.logMessage(`Current image index: ${this.imageIndexDisplayed}`)
-
-		if (this.imageDiplayedNumber === this.imgNameList.length - 1) {
-			this.imageDiplayedNumber = 0;
+		if (this.imageDisplayedNumber === this.imgNameList.length - 1) {
+			clearInterval(this.intervalInstance);
+			this.finishAllImgInCurrentDirectory = true;
 			this.getListImgNameFromFTPServer();
 			return;
 		}
 
-		this.imageDiplayedNumber++;
+		this.imageDisplayedNumber++;
 	},
 
 	/**
@@ -155,12 +181,12 @@ Module.register("MMM-FTP-image", {
 	 */
 	logMessage: function (message, type) {
 		switch (type) {
-			case 'erorr':
+			case "erorr":
 				Log.error(`Module ${this.name} | ${message}`);
 				break;
 			default:
 				Log.info(`Module ${this.name} | ${message}`);
 				break;
 		}
-	},
+	}
 });
