@@ -1,18 +1,17 @@
-const FTPClient = require('ftp');
-var NodeHelper = require('node_helper');
-const ConcatStream = require('concat-stream');
-const {
-	Base64Encode
-} = require('base64-stream');
-const ImgAuthorized = require('./src/constants/img-authorized');
+const FTPClient = require("ftp");
+var NodeHelper = require("node_helper");
+const ConcatStream = require("concat-stream");
+const { Base64Encode } = require("base64-stream");
+const { ExtensionAuthorized, MimeTypesAuthorized } = require("./src/constants/img-authorized");
 
 module.exports = NodeHelper.create({
+	dirNameList: [], // Array<{ id: number; name: string }>
+
 	imgNameList: [], // Array<{ id: number; name: string }>
 	imgBase64: new Object(), // { base64: string; mimeType: string }
-	imgAuthorized: ImgAuthorized,
 
 	init: function () {
-		console.log('MMM-FTP-image module helper initialized.');
+		console.log("MMM-FTP-image module helper initialized.");
 	},
 
 	/**
@@ -23,12 +22,16 @@ module.exports = NodeHelper.create({
 	socketNotificationReceived: function (notification, payload) {
 		var self = this;
 
-		if (notification === 'FTP_IMG_CALL_LIST') {
-			self.imgNameList = [];
-			self.connectFTPServer(self, 'list', payload);
-		} else if (notification === 'FTP_IMG_CALL_BASE64') {
-			self.imgBase64 = new Object();
-			self.connectFTPServer(self, 'get', payload);
+		switch (notification) {
+			case "FTP_IMG_CALL_LIST":
+				self.imgNameList = [];
+				self.connectFTPServer(self, "list", payload);
+				self.dirPathsAuthorized = payload.dirPathsAuthorized;
+				break;
+			case "FTP_IMG_CALL_BASE64":
+				self.imgBase64 = new Object();
+				self.connectFTPServer(self, "get", payload);
+				break;
 		}
 	},
 
@@ -41,16 +44,14 @@ module.exports = NodeHelper.create({
 	connectFTPServer: function (self, type, payload) {
 		const ftp = new FTPClient();
 
-		ftp.on('ready', function () {
-			ftp.cwd(payload.dirPath, function (err) {
-				if (err) throw err
-			});
-
+		ftp.on("ready", function () {
 			switch (type) {
-				case 'list':
+				case "list":
+					self.moveDir(ftp, self, payload);
 					self.sendListName(ftp, self);
 					break;
-				case 'get':
+				case "get":
+					self.moveDir(ftp, self, payload);
 					self.sendBase64Img(ftp, self, payload);
 					break;
 				default:
@@ -60,6 +61,18 @@ module.exports = NodeHelper.create({
 
 		ftp.connect({
 			...payload
+		});
+	},
+
+	moveDir: function (ftp, self, payload) {
+		let path = "test";
+
+		if (payload.defaultDirPath) {
+			path = payload.defaultDirPath;
+		}
+
+		ftp.cwd(path, function (err) {
+			if (err) throw err;
 		});
 	},
 
@@ -75,17 +88,33 @@ module.exports = NodeHelper.create({
 			for (let i = 0; i < list.length; i++) {
 				const file = list[i];
 
-				// If file is a type of File and extension match with imgAuthorized
-				if (file.type === '-' && file.name.match(new RegExp(`.(${self.imgAuthorized}?)$`, 'gm'))) {
-					self.imgNameList.push({
-						id: i,
-						name: file.name,
-					});
+				switch (file.type) {
+					case "-": // File type
+						if (file.name.match(new RegExp(`.(${ExtensionAuthorized}?)$`, "gm"))) {
+							self.imgNameList.push({
+								name: file.name,
+								id: self.imgNameList.length + 1
+							});
+						}
+						break;
+
+					case "d": // Directory type
+						if (
+							(![".", ".."].includes(file.name) && !self.dirPathsAuthorized) ||
+							(![".", ".."].includes(file.name) && self.dirPathsAuthorized && self.dirPathsAuthorized.includes(file.name))
+						) {
+							self.dirNameList.push({
+								name: file.name,
+								id: self.dirNameList.length + 1
+							});
+						}
+						break;
 				}
 			}
 
 			ftp.end();
-			self.sendSocketNotification('FTP_IMG_LIST_NAME', self.imgNameList);
+
+			self.sendSocketNotification("FTP_IMG_LIST_NAME", self.imgNameList);
 		});
 	},
 
@@ -100,20 +129,21 @@ module.exports = NodeHelper.create({
 			ftp.get(payload.fileName, function (err, stream) {
 				if (err) reject(err);
 
-				self.streamToBase64(stream).then(function (res) {
-					self.imgBase64 = {
-						base64: res,
-						mimeType: self.getMimeType(res),
-					};
-					resolve();
-				}).catch(function (err) {
-					throw new Error(err);
-				});
-			})
+				self.streamToBase64(stream, ftp)
+					.then(function (res) {
+						self.imgBase64 = {
+							base64: res,
+							mimeType: self.getMimeType(payload.fileName)
+						};
+						resolve();
+					})
+					.catch(function (err) {
+						throw new Error(err);
+					});
+			});
 		});
 
-		ftp.end();
-		self.sendSocketNotification('FTP_IMG_BASE64', self.imgBase64)
+		self.sendSocketNotification("FTP_IMG_BASE64", self.imgBase64);
 	},
 
 	/**
@@ -123,36 +153,32 @@ module.exports = NodeHelper.create({
 	 */
 	streamToBase64: function (stream) {
 		return new Promise((resolve, reject) => {
-			const base64 = new Base64Encode()
+			const base64 = new Base64Encode();
 
 			const cbConcat = (base64) => {
-				resolve(base64)
-			}
+				resolve(base64);
+			};
 
 			stream
 				.pipe(base64)
 				.pipe(ConcatStream(cbConcat))
-				.on('error', (error) => {
-					reject(error)
+				.once("close", function () {
+					ftp.end();
 				})
-		})
+				.on("error", (error) => {
+					reject(error);
+				});
+		});
 	},
 
 	/**
 	 * Get mimeType of file
-	 * @param {String} base64 - Base64 file
+	 * @param {String} filename - File name
 	 * @returns {String} - MimeType of file
 	 */
-	getMimeType: function (base64) {
-		const signatures = {
-			R0lGODdh: "image/gif",
-			R0lGODlh: "image/gif",
-			iVBORw0KGgo: "image/png",
-			"/9j/": "image/jpg"
-		};
-
-		for (var s in signatures) {
-			if (base64.indexOf(s) === 0) {
+	getMimeType: function (filename) {
+		for (var s in MimeTypesAuthorized) {
+			if (filename.indexOf(s) === 0) {
 				return signatures[s];
 			}
 		}
