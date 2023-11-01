@@ -66,7 +66,7 @@ module.exports = NodeHelper.create({
 	dirChangeAlgo: function (ftp, self, payload, type) {
 		let path = null;
 
-		if (self.dirIndex !== 0) {
+		if (self.dirIndex > 0) {
 			path = payload.defaultDirPath
 				? `${payload.defaultDirPath}/${self.dirNameList[self.dirIndex - 1].name}`
 				: self.dirNameList[self.dirIndex - 1].name;
@@ -83,17 +83,16 @@ module.exports = NodeHelper.create({
 				self.dirIndex = -1;
 				self.dirPathVisited = [];
 			}
-		} else if (payload.defaultDirPath && !payload.finishAllImgInCurrentDirectory) {
+		}
+		// First call and defaultDirPath is defined
+		else if (payload.defaultDirPath && !payload.finishAllImgInCurrentDirectory) {
 			path = payload.defaultDirPath;
 		}
-
-		if (
-			type === 'list' &&
-			self.dirIndex === 1 &&
-			payload.defaultDirPath &&
-			payload.finishAllImgInCurrentDirectory
-		) {
-			self.dirPathVisited.push(payload.defaultDirPath);
+		// End all directory has been visited and defaultDirPath is defined => restart
+		else if (payload.defaultDirPath && payload.finishAllImgInCurrentDirectory) {
+			self.dirIndex = 0;
+			self.dirPathVisited = [];
+			path = payload.defaultDirPath;
 		}
 
 		if (path) {
