@@ -12,7 +12,8 @@ Module.register('MMM-FTP-image', {
 		host: 'localhost',
 
 		// FTP directory configuration
-		defaultDirPath: 'test', // Type: string | null => Default directory to retrieve images
+
+		defaultDirPath: null, // 'test' // Type: string | null => Default directory to retrieve images
 		dirPathsAuthorized: ['tutu', 'toto'], // Type: Array<string> => List of authorized directories
 
 		// Display configuration
@@ -43,7 +44,7 @@ Module.register('MMM-FTP-image', {
 
 	/**
 	 * Received image from websocket
-	 * @param {String} notification - Route of websocket
+	 * @param {string} notification - Route of websocket
 	 * @param {Array<{ id: number; name: string }>} payload - Array of image name to display
 	 */
 	socketNotificationReceived: function (notification, payload) {
@@ -54,6 +55,7 @@ Module.register('MMM-FTP-image', {
 
 				if (!this.imageLoadFinished || this.finishAllImgInCurrentDirectory) {
 					this.scheduleImgUpdateInterval();
+					this.finishAllImgInCurrentDirectory = false;
 				}
 				break;
 
@@ -73,7 +75,7 @@ Module.register('MMM-FTP-image', {
 	getDom: function () {
 		var wrapper = document.createElement('div');
 
-		if (this.error != null) {
+		if (this.error !== null) {
 			wrapper.innerHTML = this.translate(this.error);
 		}
 
@@ -108,12 +110,13 @@ Module.register('MMM-FTP-image', {
 			password: this.config.password,
 			defaultDirPath: this.config.defaultDirPath,
 			dirPathsAuthorized: this.config.dirPathsAuthorized,
+			finishAllImgInCurrentDirectory: this.finishAllImgInCurrentDirectory,
 		});
 	},
 
 	/**
 	 * Create HTML image element
-	 * @param {Object} image
+	 * @param {object} image - Image object
 	 * @returns {HTMLImageElement} - Image HTML element
 	 */
 	createImageElement: function (image) {
@@ -136,7 +139,9 @@ Module.register('MMM-FTP-image', {
 			port: this.config.port,
 			user: this.config.user,
 			password: this.config.password,
+			defaultDirPath: this.config.defaultDirPath,
 			dirPathsAuthorized: this.config.dirPathsAuthorized,
+			finishAllImgInCurrentDirectory: this.finishAllImgInCurrentDirectory,
 		};
 
 		// Get first image
@@ -166,8 +171,14 @@ Module.register('MMM-FTP-image', {
 
 		if (this.imageDisplayedNumber === this.imgNameList.length - 1) {
 			clearInterval(this.intervalInstance);
-			this.finishAllImgInCurrentDirectory = true;
-			this.getListImgNameFromFTPServer();
+
+			// Wait 10s before call next directory
+			setTimeout(() => {
+				this.imgNameList = [];
+				this.finishAllImgInCurrentDirectory = true;
+				this.sendSocketNotification('FTP_IMG_CALL_NEXT_DIR');
+				this.getListImgNameFromFTPServer();
+			}, this.config.imgChangeInterval);
 			return;
 		}
 
@@ -176,8 +187,8 @@ Module.register('MMM-FTP-image', {
 
 	/**
 	 * Function to log message
-	 * @param {String} message
-	 * @param {String} type
+	 * @param {string} message - Message to log
+	 * @param {string} type - Type of message
 	 */
 	logMessage: function (message, type) {
 		switch (type) {

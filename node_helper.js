@@ -5,6 +5,8 @@ const { Base64Encode } = require('base64-stream');
 const { ExtensionAuthorized, MimeTypesAuthorized } = require('./src/constants/img-authorized');
 
 module.exports = NodeHelper.create({
+	dirIndex: 0,
+	dirPathVisited: [], // Array<string>
 	dirNameList: [], // Array<{ id: number; name: string }>
 
 	imgNameList: [], // Array<{ id: number; name: string }>
@@ -16,8 +18,8 @@ module.exports = NodeHelper.create({
 
 	/**
 	 * Subscribe to websocket events
-	 * @param {String} notification - Route name of websocket
-	 * @param {Object} payload - Configuration for FTP server with another informations
+	 * @param {string} notification - Route name of websocket
+	 * @param {object} payload - Configuration for FTP server with another information
 	 */
 	socketNotificationReceived: function (notification, payload) {
 		var self = this;
@@ -25,12 +27,16 @@ module.exports = NodeHelper.create({
 		switch (notification) {
 			case 'FTP_IMG_CALL_LIST':
 				self.imgNameList = [];
-				self.connectFTPServer(self, 'list', payload);
 				self.dirPathsAuthorized = payload.dirPathsAuthorized;
+
+				self.connectFTPServer(self, 'list', payload);
 				break;
 			case 'FTP_IMG_CALL_BASE64':
 				self.imgBase64 = new Object();
 				self.connectFTPServer(self, 'get', payload);
+				break;
+			case 'FTP_IMG_CALL_NEXT_DIR':
+				self.dirIndex++;
 				break;
 		}
 	},
@@ -47,11 +53,11 @@ module.exports = NodeHelper.create({
 		ftp.on('ready', function () {
 			switch (type) {
 				case 'list':
-					self.moveDir(ftp, self, payload);
+					self.moveDir(ftp, self, payload, type);
 					self.sendListName(ftp, self);
 					break;
 				case 'get':
-					self.moveDir(ftp, self, payload);
+					self.moveDir(ftp, self, payload, type);
 					self.sendBase64Img(ftp, self, payload);
 					break;
 				default:
@@ -64,22 +70,50 @@ module.exports = NodeHelper.create({
 		});
 	},
 
-	moveDir: function (ftp, self, payload) {
-		let path = 'test';
+	moveDir: function (ftp, self, payload, type) {
+		let path = null;
 
-		if (payload.defaultDirPath) {
+		if (self.dirIndex !== 0) {
+			path = payload.defaultDirPath
+				? `${payload.defaultDirPath}/${self.dirNameList[self.dirIndex - 1].name}`
+				: self.dirNameList[self.dirIndex - 1].name;
+
+			if (type === 'list') {
+				self.dirPathVisited.push(self.dirNameList[self.dirIndex - 1].name);
+			}
+
+			if (
+				self.dirPathVisited.length === self.dirNameList.length &&
+				type === 'get' &&
+				payload.finishAllImgInCurrentDirectory
+			) {
+				self.dirIndex = -1;
+				self.dirPathVisited = [];
+			}
+		} else if (payload.defaultDirPath && !payload.finishAllImgInCurrentDirectory) {
 			path = payload.defaultDirPath;
 		}
 
-		ftp.cwd(path, function (err) {
-			if (err) throw err;
-		});
+		if (
+			type === 'list' &&
+			self.dirIndex === 1 &&
+			payload.defaultDirPath &&
+			payload.finishAllImgInCurrentDirectory
+		) {
+			self.dirPathVisited.push(payload.defaultDirPath);
+		}
+
+		if (path) {
+			ftp.cwd(path, function (err) {
+				if (err) throw err;
+			});
+		}
 	},
 
 	/**
 	 * Get list of image name and send this list
 	 * @param {FTPClient} ftp - FTP client
-	 * @param {*} self
+	 * @param self
 	 */
 	sendListName: function (ftp, self) {
 		ftp.list(async function (err, list) {
