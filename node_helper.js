@@ -126,7 +126,8 @@ module.exports = NodeHelper.create({
 
 					case 'd': // Directory type
 						if (
-							(!['.', '..'].includes(file.name) && !self.dirPathsAuthorized) ||
+							(!['.', '..'].includes(file.name) &&
+								(!self.dirPathsAuthorized || self.dirPathsAuthorized.length === 0)) ||
 							(!['.', '..'].includes(file.name) &&
 								self.dirPathsAuthorized &&
 								self.dirPathsAuthorized.includes(file.name))

@@ -13,7 +13,7 @@ Module.register('MMM-FTP-image', {
 
 		// FTP directory configuration
 		defaultDirPath: null, // Type: string | null => Default directory to retrieve images
-		dirPathsAuthorized: ['tutu', 'toto'], // Type: Array<string> => List of authorized directories
+		dirPathsAuthorized: [], // Type: Array<string> => List of authorized directories
 
 		// Display configuration
 		opacity: 1.0,
@@ -41,11 +41,6 @@ Module.register('MMM-FTP-image', {
 		this.getListImgNameFromFTPServer();
 	},
 
-	/**
-	 * Received image from websocket
-	 * @param {string} notification - Route of websocket
-	 * @param {Array<{ id: number; name: string }>} payload - Array of image name to display
-	 */
 	socketNotificationReceived: function (notification, payload) {
 		switch (notification) {
 			case 'FTP_IMG_LIST_NAME':
@@ -67,10 +62,6 @@ Module.register('MMM-FTP-image', {
 		}
 	},
 
-	/**
-	 * Reload DOM
-	 * @returns {HTMLDivElement} - Module HTML element
-	 */
 	getDom: function () {
 		var wrapper = document.createElement('div');
 
@@ -113,11 +104,6 @@ Module.register('MMM-FTP-image', {
 		});
 	},
 
-	/**
-	 * Create HTML image element
-	 * @param {object} image - Image object
-	 * @returns {HTMLImageElement} - Image HTML element
-	 */
 	createImageElement: function (image) {
 		var element = document.createElement('img');
 		element.src = `data:${image.mimeType};base64, ${image.base64}`;
@@ -161,10 +147,6 @@ Module.register('MMM-FTP-image', {
 		}, this.config.imgChangeInterval);
 	},
 
-	/**
-	 * Increment image
-	 * @returns {void}
-	 */
 	incrementImageIndex: function () {
 		this.logMessage(`Current image index: ${this.imageDisplayedNumber}`);
 
