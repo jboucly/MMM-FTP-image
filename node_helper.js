@@ -1,4 +1,5 @@
 const FTPClient = require('ftp');
+const Log = require('logger');
 var NodeHelper = require('node_helper');
 const ConcatStream = require('concat-stream');
 const { Base64Encode } = require('base64-stream');
@@ -13,51 +14,43 @@ module.exports = NodeHelper.create({
 	imgBase64: new Object(), // { base64: string; mimeType: string }
 
 	init: function () {
-		console.log('MMM-FTP-image module helper initialized.');
+		Log.log('MMM-FTP-image module helper initialized.');
 	},
 
-	/**
-	 * Subscribe to websocket events
-	 * @param {string} notification - Route name of websocket
-	 * @param {object} payload - Configuration for FTP server with another information
-	 */
 	socketNotificationReceived: function (notification, payload) {
-		var self = this;
-
 		switch (notification) {
 			case 'FTP_IMG_CALL_LIST':
-				self.imgNameList = [];
-				self.dirPathsAuthorized = payload.dirPathsAuthorized;
+				this.imgNameList = [];
 
-				self.connectFTPServer(self, 'list', payload);
+				if (payload.dirPathsAuthorized) {
+					this.dirPathsAuthorized = payload.dirPathsAuthorized;
+					this.connectFTPServer('list', payload);
+				} else {
+					Log.error('dirPathsAuthorized is not defined !');
+				}
 				break;
 			case 'FTP_IMG_CALL_BASE64':
-				self.imgBase64 = new Object();
-				self.connectFTPServer(self, 'get', payload);
+				this.imgBase64 = new Object();
+				this.connectFTPServer('get', payload);
 				break;
 			case 'FTP_IMG_CALL_NEXT_DIR':
-				self.dirIndex++;
+				this.dirIndex++;
 				break;
 		}
 	},
 
-	/**
-	 * Connect to FTP server
-	 * @param {*} self
-	 * @param {Strig} type - Type of connection
-	 * @param {Object} payload - Payload from websocket
-	 */
-	connectFTPServer: function (self, type, payload) {
+	connectFTPServer: function (type, payload) {
 		const ftp = new FTPClient();
+		const self = this;
 
 		ftp.on('ready', function () {
 			switch (type) {
 				case 'list':
-					self.moveDir(ftp, self, payload, type);
+					self.dirChangeAlgo(ftp, self, payload, type);
 					self.sendListName(ftp, self);
 					break;
 				case 'get':
-					self.moveDir(ftp, self, payload, type);
+					self.dirChangeAlgo(ftp, self, payload, type);
 					self.sendBase64Img(ftp, self, payload);
 					break;
 				default:
@@ -70,7 +63,7 @@ module.exports = NodeHelper.create({
 		});
 	},
 
-	moveDir: function (ftp, self, payload, type) {
+	dirChangeAlgo: function (ftp, self, payload, type) {
 		let path = null;
 
 		if (self.dirIndex !== 0) {
@@ -104,17 +97,16 @@ module.exports = NodeHelper.create({
 		}
 
 		if (path) {
-			ftp.cwd(path, function (err) {
-				if (err) throw err;
-			});
+			self.moveDir(ftp, path);
 		}
 	},
 
-	/**
-	 * Get list of image name and send this list
-	 * @param {FTPClient} ftp - FTP client
-	 * @param self
-	 */
+	moveDir: function (ftp, path) {
+		ftp.cwd(path, function (err) {
+			if (err) throw err;
+		});
+	},
+
 	sendListName: function (ftp, self) {
 		ftp.list(async function (err, list) {
 			if (err) throw err;
@@ -154,12 +146,6 @@ module.exports = NodeHelper.create({
 		});
 	},
 
-	/**
-	 *
-	 * @param {FTPClient} ftp - FTP client
-	 * @param {*} self
-	 * @param {Object} payload - Payload from websocket
-	 */
 	sendBase64Img: async function (ftp, self, payload) {
 		await new Promise((resolve, reject) => {
 			ftp.get(payload.fileName, function (err, stream) {
@@ -182,12 +168,7 @@ module.exports = NodeHelper.create({
 		self.sendSocketNotification('FTP_IMG_BASE64', self.imgBase64);
 	},
 
-	/**
-	 * Convert a Readable Stream to base64 string
-	 * @param {ReadableStream} stream - a readable stream to convert in base64 string
-	 * @returns {Promise} - Promise that resolve in a string containing the base64
-	 */
-	streamToBase64: function (stream) {
+	streamToBase64: function (stream, ftp) {
 		return new Promise((resolve, reject) => {
 			const base64 = new Base64Encode();
 
@@ -207,15 +188,10 @@ module.exports = NodeHelper.create({
 		});
 	},
 
-	/**
-	 * Get mimeType of file
-	 * @param {String} filename - File name
-	 * @returns {String} - MimeType of file
-	 */
 	getMimeType: function (filename) {
 		for (var s in MimeTypesAuthorized) {
 			if (filename.indexOf(s) === 0) {
-				return signatures[s];
+				return MimeTypesAuthorized[s];
 			}
 		}
 	},

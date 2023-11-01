@@ -12,8 +12,7 @@ Module.register('MMM-FTP-image', {
 		host: 'localhost',
 
 		// FTP directory configuration
-
-		defaultDirPath: null, // 'test' // Type: string | null => Default directory to retrieve images
+		defaultDirPath: null, // Type: string | null => Default directory to retrieve images
 		dirPathsAuthorized: ['tutu', 'toto'], // Type: Array<string> => List of authorized directories
 
 		// Display configuration
@@ -185,11 +184,6 @@ Module.register('MMM-FTP-image', {
 		this.imageDisplayedNumber++;
 	},
 
-	/**
-	 * Function to log message
-	 * @param {string} message - Message to log
-	 * @param {string} type - Type of message
-	 */
 	logMessage: function (message, type) {
 		switch (type) {
 			case 'erorr':
