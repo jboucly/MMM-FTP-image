@@ -18,6 +18,13 @@ A [MagicMirror](https://magicmirror.builders/) Module to display images from an 
 
 Image authorized : GIF, PNG, JPG, JPEG, BMP, WEBP, ICO, DIB
 
+## Features
+
+-   [x] Display images from FTP server with interval
+-   [x] Possibility to set directory to retrieve images
+-   [x] Possibility to set authorized directories
+-   [ ] Interaction for next or previous image from an event / notification from another MagicMirror2 module
+
 ## Screenshots
 
 Displaying images from FTP server
@@ -60,33 +67,125 @@ To use this module, add it to the modules array in the `config/config.js` file:
 
 ```javascript
 modules: [
-  {
-    module: "MMM-FTP-image",
-    position: "middle_center",
-    config: {
-      opacity: 1.0,
-      width: "20%",
-      height: "20%",
-      dirPath: "/magicMirror",
-      password: "1234567890",
+    {
+        module: 'MMM-FTP-image',
+        position: 'middle_center',
+        config: {
+            // FTP server configuration
+            port: 5555,
+            user: 'pi',
+            host: '192.168.1.16',
+            password: '1234567890',
+
+            // Display configuration
+            opacity: 1.0,
+            width: '50%',
+            height: '100%',
+            imgChangeInterval: 5000,
+
+            // FTP directory configuration
+            defaultDirPath: null,
+            dirPathsAuthorized: ['pictures'],
+        },
     },
-  },
 ];
 ```
 
 ## Configuration options
 
 The following properties can be configured:
-| Options | Required | Default | Description |
-|-----------------------|:--------:|:---------:|----------------------------------------|
-| host | false | localhost | Host of your FTP server. Required if the ftp hostname is **not** 'localhost' |
-| port | false | 21 | Port of your FTP server. Required if the ftp port is **not** '21' |
-| user | false | pi | Name of user for connect to FTP server. Required if the ftp user is **not** 'pi' |
-| password | true | null | Password for connect to FTP server.|
-| --------------------- | -------- | --------- | -------------------------------------- |
-| opacity | false | 1.0 | Image opacity style |
-| width | false | 100% | Image width |
-| height | false | 100% | Image height |
-| --------------------- | -------- | --------- | -------------------------------------- |
-| imgChangeInterval | false | 10s | Image change interval |
-| imageLoadInitialDelay | false | 1s | Initial delay for show first image |
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-color:#ccc;border-spacing:0;}
+.tg td{background-color:#fff;border-color:#ccc;border-style:solid;border-width:1px;color:#333;
+  font-family:Arial, sans-serif;font-size:14px;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{background-color:#f0f0f0;border-color:#ccc;border-style:solid;border-width:1px;color:#333;
+  font-family:Arial, sans-serif;font-size:14px;font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-baqh{text-align:center;vertical-align:top}
+.tg .tg-c3ow{border-color:inherit;text-align:center;vertical-align:top}
+.tg .tg-fymr{border-color:inherit;font-weight:bold;text-align:left;vertical-align:top}
+.tg .tg-7btt{border-color:inherit;font-weight:bold;text-align:center;vertical-align:top}
+.tg .tg-0pky{border-color:inherit;text-align:left;vertical-align:top}
+.tg .tg-0lax{text-align:left;vertical-align:top}
+</style>
+<table class="tg">
+<thead>
+  <tr>
+    <th class="tg-fymr">Options</th>
+    <th class="tg-7btt">Required</th>
+    <th class="tg-7btt">Default</th>
+    <th class="tg-fymr">Description</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-baqh" colspan="4"><span style="font-weight:bold">FTP server configuration</span></td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">host</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">localhost</td>
+    <td class="tg-0pky">Host of your FTP server. Required if the ftp hostname is <span style="font-weight:bold">not</span> 'localhost'</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">port</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">21</td>
+    <td class="tg-0pky">Port of your FTP server. Required if the ftp port is <span style="font-weight:bold">not</span> '21'</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">user</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">pi</td>
+    <td class="tg-0pky">Name of user for connect to FTP server. Required if the ftp user is <span style="font-weight:bold">not</span> 'pi'</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">password</td>
+    <td class="tg-c3ow">true</td>
+    <td class="tg-c3ow">null</td>
+    <td class="tg-0pky">Password for connect to FTP server.</td>
+  </tr>
+  <tr>
+    <td class="tg-c3ow" colspan="4"><span style="font-weight:bold">Display configuration</span></td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">opacity</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">1.0</td>
+    <td class="tg-0pky">Image opacity style</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">width</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">100%</td>
+    <td class="tg-0pky">Image width</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">height</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">100%</td>
+    <td class="tg-0pky">Image height</td>
+  </tr>
+  <tr>
+    <td class="tg-0lax">imgChangeInterval</td>
+    <td class="tg-baqh">false</td>
+    <td class="tg-baqh">10s</td>
+    <td class="tg-0lax">Image change interval</td>
+  </tr>
+  <tr>
+    <td class="tg-c3ow" colspan="4"><span style="font-weight:bold">FTP directory configuration</span></td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">defaultDirPath</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">null</td>
+    <td class="tg-0pky">Default directory to retrieve images. By default, this module retrieve images in current directory of FTP server</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">dirPathsAuthorized</td>
+    <td class="tg-c3ow">false</td>
+    <td class="tg-c3ow">[]</td>
+    <td class="tg-0pky">List of authorized directories</td>
+  </tr>
+</tbody>
+</table>
