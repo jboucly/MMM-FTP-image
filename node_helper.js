@@ -114,6 +114,7 @@ module.exports = NodeHelper.create({
 		ftp.list(async function (err, list) {
 			if (err) {
 				console.warn('Error while listing files', err);
+				self.reset();
 				throw err;
 			}
 
