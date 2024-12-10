@@ -30,3 +30,13 @@ Fix JS memory leak and overflows.
 ### Issues
 
 [Allow multiple directories](https://github.com/jboucly/MMM-FTP-image/issues/4#issue-1500663876)
+
+## 1.0.4
+
+### Description
+
+-   Implement `RESET` event to reset the module when the package `ftp` return an error.
+
+### Issues
+
+[Exception when reaching last image, and trying to load the next](https://github.com/jboucly/MMM-FTP-image/issues/8)
