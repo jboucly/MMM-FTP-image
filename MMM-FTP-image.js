@@ -160,7 +160,6 @@ Module.register('MMM-FTP-image', {
 
 	incrementImageIndex: function () {
 		this.logMessage(`Current image index: ${this.imageDisplayedNumber}`);
-		console.log('IMG list length', this.imgNameList.length, this.imageDisplayedNumber);
 
 		if (this.imageDisplayedNumber === this.imgNameList.length - 1) {
 			clearInterval(this.intervalInstance);
