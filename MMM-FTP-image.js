@@ -51,13 +51,24 @@ Module.register('MMM-FTP-image', {
 					this.scheduleImgUpdateInterval();
 					this.finishAllImgInCurrentDirectory = false;
 				}
-				break;
+
+				if (this.imageLoadFinished) break;
 
 			case 'FTP_IMG_BASE64':
 				this.logMessage('Images received !');
 				this.imgBase64 = payload;
 				this.incrementImageIndex();
 				this.updateDom();
+				break;
+
+			case 'RESET':
+				this.logMessage('RESET');
+				this.imageLoadFinished = false;
+				this.finishAllImgInCurrentDirectory = true;
+				this.imgNameList = [];
+				this.imageDisplayedNumber = 0;
+				clearInterval(this.intervalInstance);
+				this.getListImgNameFromFTPServer();
 				break;
 		}
 	},
