@@ -102,13 +102,20 @@ module.exports = NodeHelper.create({
 
 	moveDir: function (ftp, path) {
 		ftp.cwd(path, function (err) {
-			if (err) throw err;
+			if (err) {
+				console.warn('Error while moving to directory', err);
+				self.reset();
+				throw err;
+			}
 		});
 	},
 
 	sendListName: function (ftp, self) {
 		ftp.list(async function (err, list) {
-			if (err) throw err;
+			if (err) {
+				console.warn('Error while listing files', err);
+				throw err;
+			}
 
 			for (let i = 0; i < list.length; i++) {
 				const file = list[i];
@@ -149,7 +156,12 @@ module.exports = NodeHelper.create({
 	sendBase64Img: async function (ftp, self, payload) {
 		await new Promise((resolve, reject) => {
 			ftp.get(payload.fileName, function (err, stream) {
-				if (err) reject(err);
+				if (err) {
+					console.warn('Error while getting file', err);
+					reject(err);
+
+					self.reset();
+				}
 
 				self.streamToBase64(stream, ftp)
 					.then(function (res) {
@@ -160,6 +172,8 @@ module.exports = NodeHelper.create({
 						resolve();
 					})
 					.catch(function (err) {
+						console.warn('Error while converting stream to base64', err);
+						self.reset();
 						throw new Error(err);
 					});
 			});
@@ -183,16 +197,28 @@ module.exports = NodeHelper.create({
 					ftp.end();
 				})
 				.on('error', error => {
+					console.warn('Error while piping stream', error);
 					reject(error);
+					self.reset();
 				});
 		});
 	},
 
 	getMimeType: function (filename) {
-		for (var s in MimeTypesAuthorized) {
+		for (const s in MimeTypesAuthorized) {
 			if (filename.indexOf(s) === 0) {
 				return MimeTypesAuthorized[s];
 			}
 		}
+	},
+
+	reset: function () {
+		this.dirIndex = 0;
+		this.dirPathVisited = [];
+		this.dirNameList = [];
+		this.imgNameList = [];
+		this.imgBase64 = new Object();
+
+		this.sendSocketNotification('RESET');
 	},
 });
