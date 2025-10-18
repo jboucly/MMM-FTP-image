@@ -5,6 +5,13 @@
 	"main": "MMM-FTP-image.js",
 	"author": "jboucly",
 	"license": "ISC",
+	"keywords": [
+		"ftp",
+		"media",
+		"smart-home",
+		"mirror",
+		"magic-mirror"
+	],
 	"dependencies": {
 		"base64-stream": "^1.0.0",
 		"concat-stream": "^2.0.0",
